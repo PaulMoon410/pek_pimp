@@ -42,6 +42,7 @@ def read_bot_info(file_path):
     return None, None
 
 if __name__ == "__main__":
+    import sys
     # Read credentials from bot_info.txt
     HIVE_ACCOUNT, HIVE_ACTIVE_KEY = read_bot_info("bot_info.txt")
     HIVE_NODES = ["https://api.hive.blog", "https://anyx.io"]
@@ -49,8 +50,14 @@ if __name__ == "__main__":
     if not HIVE_ACCOUNT or not HIVE_ACTIVE_KEY:
         print("[ERROR] Missing Hive account credentials. Please check bot_info.txt.")
     else:
-        while True:
+        # Check if called with --once argument (from pek_pimp.py)
+        if len(sys.argv) > 1 and sys.argv[1] == "--once":
             print(f"[INFO] Checking for open orders to cancel for account: {HIVE_ACCOUNT}")
             cancel_one_order(HIVE_ACCOUNT, HIVE_ACTIVE_KEY, nodes=HIVE_NODES)
-            print("[INFO] Waiting for 5 minutes before the next cycle.")
-            time.sleep(300)  # Wait for 5 minutes
+        else:
+            # Normal standalone mode - run continuously
+            while True:
+                print(f"[INFO] Checking for open orders to cancel for account: {HIVE_ACCOUNT}")
+                cancel_one_order(HIVE_ACCOUNT, HIVE_ACTIVE_KEY, nodes=HIVE_NODES)
+                print("[INFO] Waiting for 5 minutes before the next cycle.")
+                time.sleep(300)  # Wait for 5 minutes

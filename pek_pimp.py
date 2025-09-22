@@ -63,8 +63,8 @@ def pimp_logic(account_name, token):
             if not has_open_order("buy", buy_price):
                 max_hive_to_spend = min(hive_balance, 3, 0.1999999 - pimp_market_value)
                 if max_hive_to_spend > 0:
-                    buy_qty = round(max_hive_to_spend / buy_price, 8)
-                    print(f"[INFO] Placing Buy Order - Price: {buy_price}, Quantity: {buy_qty}")
+                    buy_qty = round(max_hive_to_spend / buy_price, 8)  # Calculate PIMP quantity based on HIVE amount
+                    print(f"[INFO] Placing Buy Order - Price: {buy_price}, Quantity: {buy_qty} (spending {max_hive_to_spend} HIVE)")
                     place_order(account_name, token, buy_price, buy_qty, order_type="buy", active_key=HIVE_ACTIVE_KEY, nodes=HIVE_NODES)
                     cancel_triggered = True  # Mark cancel as needed
                     time.sleep(6)
@@ -78,8 +78,9 @@ def pimp_logic(account_name, token):
             sell_price = round(ask, 8)
             print(f"[DEBUG] Calculated Sell Price: {sell_price}")
             if not has_open_order("sell", sell_price):
-                sell_qty = round(pimp_balance * 0.3, 8)
-                print(f"[INFO] Placing Sell Order - Price: {sell_price}, Quantity: {sell_qty}")
+                sell_qty = round(pimp_balance * 0.3, 8)  # Sell 30% of PIMP holdings
+                hive_value = sell_qty * sell_price  # Calculate HIVE value of the sale
+                print(f"[INFO] Placing Sell Order - Price: {sell_price}, Quantity: {sell_qty} (receiving ~{hive_value:.8f} HIVE)")
                 place_order(account_name, token, sell_price, sell_qty, order_type="sell", active_key=HIVE_ACTIVE_KEY, nodes=HIVE_NODES)
                 cancel_triggered = True  # Mark cancel as needed
                 time.sleep(6)
@@ -90,9 +91,10 @@ def pimp_logic(account_name, token):
                 place_order(account_name, "PEK", pek_ask, 0.00000001, order_type="buy", active_key=HIVE_ACTIVE_KEY, nodes=HIVE_NODES)
         # Stabilize logic
         if hive_balance > 0 and not has_open_order("buy", TARGET_PRICE):
-            max_hive_to_spend = min(hive_balance, 0.02)
-            buy_qty = round(max_hive_to_spend / TARGET_PRICE, 8)
-            print(f"[INFO] Placing Stabilize Buy Order - Price: {TARGET_PRICE}, Quantity: {buy_qty}")
+            max_hive_to_spend = min(hive_balance, 3)  # Spend up to 3 HIVE
+            buy_qty = round(max_hive_to_spend / TARGET_PRICE, 8)  # Calculate PIMP quantity based on HIVE amount
+            print(f"[DEBUG] Calculation: {max_hive_to_spend} HIVE / {TARGET_PRICE} = {max_hive_to_spend / TARGET_PRICE} PIMP")
+            print(f"[INFO] Placing Stabilize Buy Order - Price: {TARGET_PRICE}, Quantity: {buy_qty} (spending {max_hive_to_spend} HIVE)")
             place_order(account_name, token, TARGET_PRICE, buy_qty, order_type="buy", active_key=HIVE_ACTIVE_KEY, nodes=HIVE_NODES)
             cancel_triggered = True  # Mark cancel as needed
             time.sleep(6)
@@ -106,7 +108,7 @@ def pimp_logic(account_name, token):
         if cancel_triggered and (last_cancel_time is None or current_time - last_cancel_time >= timedelta(hours=4)):
             try:
                 print("[INFO] Running pimp_cancel.py to cancel orders.")
-                subprocess.run(["python", "pimp_cancel.py"], check=True)
+                subprocess.run(["python", "pimp_cancel.py", "--once"], check=True)
                 last_cancel_time = current_time  # Update last cancel time
             except subprocess.CalledProcessError as e:
                 print(f"[ERROR] Failed to execute pimp_cancel.py: {e}")

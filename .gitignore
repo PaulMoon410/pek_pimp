@@ -1,0 +1,6 @@
+bot_info.txt
+__pycache__/
+.vscode/
+*.pyc
+.env
+.DS_Store

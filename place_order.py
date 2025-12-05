@@ -27,39 +27,57 @@ def place_order(account_name, token, price, quantity, order_type="buy", active_k
         return False
 
 def get_open_orders(account_name, token=None, nodes=None):
+    """
+    Fetch open orders for a specific account from BOTH buy and sell order books.
+    The buyBook and sellBook contain all market orders, filtered by account.
+    """
     url = "https://api.hive-engine.com/rpc/contracts"
     all_orders = []
-    offset = 0
-    page_size = 1000
-    while True:
-        query = {"account": account_name}
-        payload = {
-            "jsonrpc": "2.0",
-            "method": "find",
-            "params": {
-                "contract": "market",
-                "table": "sellBook",
-                "query": query,
-                "limit": page_size,
-                "offset": offset
-            },
-            "id": 1
-        }
-        try:
-            resp = requests.post(url, json=payload, timeout=10)
-            if resp.status_code != 200:
-                print(f"[ERROR] Failed to fetch open orders (status {resp.status_code})")
+    
+    # Fetch both buy and sell orders by filtering the order books by account
+    for table in ["buyBook", "sellBook"]:
+        offset = 0
+        page_size = 1000
+        while True:
+            query = {"account": account_name}
+            if token:
+                query["symbol"] = token
+            
+            payload = {
+                "jsonrpc": "2.0",
+                "method": "find",
+                "params": {
+                    "contract": "market",
+                    "table": table,
+                    "query": query,
+                    "limit": page_size,
+                    "offset": offset
+                },
+                "id": 1
+            }
+            try:
+                resp = requests.post(url, json=payload, timeout=10)
+                if resp.status_code != 200:
+                    print(f"[ERROR] Failed to fetch {table} orders (status {resp.status_code})")
+                    break
+                data = resp.json()
+                orders = data.get('result', [])
+                
+                # Add order type to each order
+                for order in orders:
+                    order['type'] = 'buy' if table == 'buyBook' else 'sell'
+                
+                all_orders.extend(orders)
+                if len(orders) < page_size:
+                    break
+                offset += page_size
+            except Exception as e:
+                print(f"[ERROR] Exception while fetching {table} orders: {e}")
                 break
-            data = resp.json()
-            orders = data.get('result', [])
-            all_orders.extend(orders)
-            if len(orders) < page_size:
-                break
-            offset += page_size
-        except Exception as e:
-            print(f"[ERROR] Exception while fetching open orders: {e}")
-            break
-    print(f"[DEBUG] Retrieved {len(all_orders)} open orders")
+    
+    buy_count = sum(1 for o in all_orders if o.get('type') == 'buy')
+    sell_count = sum(1 for o in all_orders if o.get('type') == 'sell')
+    print(f"[DEBUG] Retrieved {len(all_orders)} open orders ({buy_count} buys, {sell_count} sells)")
     return all_orders
 
 def get_balance(account_name, token):

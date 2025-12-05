@@ -1,0 +1,5 @@
+"""
+PIMP Market Maker Bot - Requirements
+"""
+beem>=0.22.0
+requests>=2.26.0
